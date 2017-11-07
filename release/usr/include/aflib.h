@@ -16,15 +16,14 @@
 
 typedef enum {
     AF_SUCCESS = 0,
-    AF_ERROR_NO_SUCH_ATTRIBUTE = -1,        // unknown attribute id
     // errors that don't apply to edge:
+    // AF_ERROR_NO_SUCH_ATTRIBUTE = -1,        // unknown attribute id
     // AF_ERROR_BUSY
     // AF_ERROR_INVALID_COMMAND
     // AF_ERROR_QUEUE_OVERFLOW
     // AF_ERROR_QUEUE_UNDERFLOW
     AF_ERROR_INVALID_PARAM = -6,            // bad input parameter
     AF_ERROR_UNAVAILABLE = -7,              // hubby is not available right now
-    AF_ERROR_NO_PROFILE = -8,               // can't load profile
 } af_status_t;
 
 /*
@@ -32,14 +31,14 @@ typedef enum {
  * return `true` to accept the change, or `false` to reject it.
  * (to process changes asynchronously, set `aflib_...`.)
  */
-typedef bool (*aflib_set_handler_t)(const uint8_t request_id, const uint16_t attr_id, const uint16_t value_len, const uint8_t *value);
+typedef bool (*aflib_set_handler_t)(const uint16_t attr_id, const uint16_t value_len, const uint8_t *value);
 
 /*
  * notification of an attribute's current value, either because it has
  * changed internally, or because you asked for the current value with
  * `aflib_get_attribute`.
  */
-typedef void (*aflib_notify_handler_t)(const uint8_t request_id, const uint16_t attr_id, const uint16_t value_len, const uint8_t *value);
+typedef void (*aflib_notify_handler_t)(const uint16_t attr_id, const uint16_t value_len, const uint8_t *value);
 
 /*
  * service connection status has changed.
@@ -73,12 +72,6 @@ af_status_t aflib_set_attribute_i64(const uint16_t attr_id, const int64_t value)
 af_status_t aflib_set_attribute_str(const uint16_t attr_id, const uint16_t value_len, const char *value);
 
 /*
- * to override the default location of the binary profile, set this before
- * calling `aflib_init`.
- */
-void aflib_set_profile_path(const char *path);
-
-/*
  * if you want to get notified when the hub's connection to the service goes
  * up/down, register this handler.
  */
@@ -96,8 +89,3 @@ void aflib_confirm_attr(uint16_t attr_id, bool accepted);
  * for debugging: set to one of LOG_DEBUG1, ... LOG_DEBUG4, or LOG_DEBUG_OFF (the default)
  */
 void aflib_set_debug_level(int level);
-
-/*
- * for debugging: dump the profile attribute list to syslog.
- */
-void aflib_dump_attributes(void);
