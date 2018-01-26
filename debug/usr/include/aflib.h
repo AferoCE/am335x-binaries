@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <event2/event.h>
 #include <af_log.h>
 
@@ -24,6 +25,12 @@ typedef enum {
     // AF_ERROR_QUEUE_UNDERFLOW
     AF_ERROR_INVALID_PARAM = -6,            // bad input parameter
     AF_ERROR_UNAVAILABLE = -7,              // hubby is not available right now
+
+    // errors returned from reading the binary profile:
+    AF_ERROR_FILE_NOT_FOUND = -21,
+    AF_ERROR_PROFILE_CORRUPTED = -22,
+    AF_ERROR_PROFILE_TOO_BIG = -23,
+    AF_ERROR_PROFILE_TOO_NEW = -24,
 } af_status_t;
 
 /*
@@ -89,3 +96,59 @@ void aflib_confirm_attr(uint16_t attr_id, bool accepted);
  * for debugging: set to one of LOG_DEBUG1, ... LOG_DEBUG4, or LOG_DEBUG_OFF (the default)
  */
 void aflib_set_debug_level(int level);
+
+/*
+ * attribute description from a profile.
+ * you can use the `user_data` field to store associated data, if you want.
+ */
+typedef struct {
+    uint16_t attr_id;
+    uint16_t type;          // from af_attribute_type
+    uint16_t flags;         // from af_attribute_flag
+    uint16_t max_length;
+    void *user_data;        // for your use (NULL by default)
+} af_attribute_t;
+
+/*
+ * profile description: the list of attributes and their id, type, and flags.
+ */
+typedef struct {
+    uint16_t attribute_count;
+    af_attribute_t *attributes;
+} af_profile_t;
+
+enum af_attribute_type {
+    ATTR_TYPE_BOOLEAN = 1,
+    ATTR_TYPE_SINT8 = 2,
+    ATTR_TYPE_SINT16 = 3,
+    ATTR_TYPE_SINT32 = 4,
+    ATTR_TYPE_SINT64 = 5,
+    ATTR_TYPE_FIXED_16_16 = 6,
+    ATTR_TYPE_FIXED_32_32 = 7,
+    ATTR_TYPE_UTF8S = 20,
+    ATTR_TYPE_BYTES = 21,
+};
+
+enum af_attribute_flag {
+    ATTR_FLAG_READ = 0x0001,
+    ATTR_FLAG_READ_NOTIFY = 0x0002,
+    ATTR_FLAG_WRITE = 0x0004,
+    ATTR_FLAG_WRITE_NOTIFY = 0x0008,
+    ATTR_FLAG_HAS_DEFAULT = 0x0010,
+    ATTR_FLAG_LATCH = 0x0020,
+    ATTR_FLAG_MCU_HIDE = 0x0040,
+    ATTR_FLAG_PASS_THROUGH = 0x0080,
+    ATTR_FLAG_STORE_IN_FLASH = 0x0100,
+};
+
+/*
+ * load the hub's profile description.
+ * if `filename` is `NULL`, it uses the standard profile file location.
+ */
+af_status_t aflib_profile_load(const char *filename, af_profile_t *profile);
+
+/*
+ * find the attribute description from a profile, given the attribute id.
+ * returns `NULL` if no attribute has that id.
+ */
+af_attribute_t *aflib_profile_find_attribute(af_profile_t *profile, uint16_t attr_id);
