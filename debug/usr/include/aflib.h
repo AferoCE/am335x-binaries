@@ -53,6 +53,11 @@ typedef void (*aflib_notify_handler_t)(const uint16_t attr_id, const uint16_t va
 typedef void (*aflib_connect_handler_t)(bool connected);
 
 /*
+ * IPC connection to hubby has been broken, typically because hubby has exited
+ */
+typedef void (*aflib_ipc_disconnected_handler_t)(void);
+
+/*
  * start aflib and register callbacks.
  */
 af_status_t aflib_init(struct event_base *ev, aflib_set_handler_t set_handler, aflib_notify_handler_t notify_handler);
@@ -83,6 +88,12 @@ af_status_t aflib_set_attribute_str(const uint16_t attr_id, const uint16_t value
  * up/down, register this handler.
  */
 void aflib_set_connect_handler(aflib_connect_handler_t handler);
+
+/*
+ * if you want to get notified when you lose the connection to hubby (typically
+ * because hubby exited), register this handler.
+ */
+void aflib_set_ipc_disconnected_handler(aflib_ipc_disconnected_handler_t handler);
 
 /*
  * if set to true, ignore the return code from an `aflib_set_handler_t`.
