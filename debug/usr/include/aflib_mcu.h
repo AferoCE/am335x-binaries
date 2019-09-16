@@ -50,6 +50,15 @@ typedef enum {
 } af_lib_error_t;
 
 
+/*
+ * define the reason for setting an edge attribute
+ */
+typedef enum {
+    AF_LIB_SET_REASON_LOCAL_CHANGE,     // Set is because of a local change of the attribute value
+    AF_LIB_SET_REASON_GET_RESPONSE,     // Set is in response to an AF_LIB_EVENT_ASR_GET_REQUEST event
+} af_lib_set_reason_t;
+
+
 /* Modify this and rebuild to increase or decrease the number of outstanding requests
  * the library can handle
  */
@@ -103,22 +112,22 @@ af_lib_error_t af_lib_get_attribute(af_lib_t *af_lib, const uint16_t attr_id);
  * af_lib_set_attribute_*
  *
  * Request setting an attribute.
- * For MCU attributes, the attribute value will be updated.
+ * For MCU attributes, the attribute value will be updated.  The rebooted param indicates if this set is because the MCU rebooted or just a normal steady state updated value.
  * For non-MCU attributes, the attribute value will be updated, and then attr_notify_handler_t callback or the AF_LIB_EVENT_ASR_SET_RESPONSE event in the af_lib_event_callback_t will be called.
  */
-af_lib_error_t af_lib_set_attribute_bool(af_lib_t *af_lib, const uint16_t attr_id, const bool value);
+af_lib_error_t af_lib_set_attribute_bool(af_lib_t *af_lib, const uint16_t attr_id, const bool value, af_lib_set_reason_t reason);
 
-af_lib_error_t af_lib_set_attribute_8(af_lib_t *af_lib, const uint16_t attr_id, const int8_t value);
+af_lib_error_t af_lib_set_attribute_8(af_lib_t *af_lib, const uint16_t attr_id, const int8_t value, af_lib_set_reason_t reason);
 
-af_lib_error_t af_lib_set_attribute_16(af_lib_t *af_lib, const uint16_t attr_id, const int16_t value);
+af_lib_error_t af_lib_set_attribute_16(af_lib_t *af_lib, const uint16_t attr_id, const int16_t value, af_lib_set_reason_t reason);
 
-af_lib_error_t af_lib_set_attribute_32(af_lib_t *af_lib, const uint16_t attr_id, const int32_t value);
+af_lib_error_t af_lib_set_attribute_32(af_lib_t *af_lib, const uint16_t attr_id, const int32_t value, af_lib_set_reason_t reason);
 
-af_lib_error_t af_lib_set_attribute_64(af_lib_t *af_lib, const uint16_t attr_id, const int64_t value);
+af_lib_error_t af_lib_set_attribute_64(af_lib_t *af_lib, const uint16_t attr_id, const int64_t value, af_lib_set_reason_t reason);
 
-af_lib_error_t af_lib_set_attribute_str(af_lib_t *af_lib, const uint16_t attr_id, const uint16_t value_len, const char *value);
+af_lib_error_t af_lib_set_attribute_str(af_lib_t *af_lib, const uint16_t attr_id, const uint16_t value_len, const char *value, af_lib_set_reason_t reason);
 
-af_lib_error_t af_lib_set_attribute_bytes(af_lib_t *af_lib, const uint16_t attr_id, const uint16_t value_len, const uint8_t *value);
+af_lib_error_t af_lib_set_attribute_bytes(af_lib_t *af_lib, const uint16_t attr_id, const uint16_t value_len, const uint8_t *value, af_lib_set_reason_t reason);
 
 /**
  * af_lib_is_idle
@@ -178,10 +187,14 @@ typedef enum {
     AF_LIB_EVENT_ASR_SET_RESPONSE,         // Response to af_lib_set_attribute() for an ASR attribute
     AF_LIB_EVENT_MCU_SET_REQ_SENT,         // Request from af_lib_set_attribute() for an MCU attribute has been sent to ASR
     AF_LIB_EVENT_MCU_SET_REQ_REJECTION,    // Request from af_lib_set_attribute() for an MCU attribute was rejected by ASR
+    AF_LIB_EVENT_ASR_GET_REQUEST,          // Request from ASR for the current value of a specific MCU attribute
     AF_LIB_EVENT_ASR_GET_RESPONSE,         // Response to af_lib_get_attribute()
     AF_LIB_EVENT_MCU_DEFAULT_NOTIFICATION, // Unsolicited default notification for an MCU attribute
     AF_LIB_EVENT_ASR_NOTIFICATION,         // Unsolicited notification of non-MCU attribute change
     AF_LIB_EVENT_MCU_SET_REQUEST,          // Request from ASR to MCU to set an MCU attribute, requires a call to af_lib_send_set_response()
+    AF_LIB_EVENT_MCU_SET_REQUEST_RESPONSE_TIMEOUT,  // The af_lib_send_set_response() has not been called from a previous AF_LIB_EVENT_MCU_SET_REQUEST event in the AF_LIB_SET_RESPONSE_TIMEOUT_SECONDS time.
+                                                    // This either indicates that the AF_LIB_SET_RESPONSE_TIMEOUT_SECONDS time is too short for some attribute set operations or there's a logic error on the MCU and a bug that should be fixed.
+                                                    // In addition to being informational, afLib will inform the server that the last set for this attribute has failed.
     AF_LIB_EVENT_COMMUNICATION_BREAKDOWN,  // The communication between the MCU and the ASR seems to have stopped, take the appropriate action (ie. rebooting the ASR)
 } af_lib_event_type_t;
 
@@ -202,7 +215,7 @@ af_lib_t *af_lib_create_with_unified_callback(af_lib_event_callback_t event_cb, 
  *
  * Send the status and new value in response to a request by ASR to set an MCU attribute.
  *
- * @param af_lib        - Instance of af_lib_t
+ * @param af_lib        - an instance of af_lib_t
  * @param attribute_id  - the MCU attribute id that was requested to be set
  * @param set_succeeded - whether or not the set was applied successfully or not
  * @param value_len     - the length of the value for this attribute id

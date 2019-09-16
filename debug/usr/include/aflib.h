@@ -1,10 +1,12 @@
 /*
- * aflib_hub.h
+ * aflib.h
  *
  * hub version of aflib
  *
  * Copyright (C) 2018 Afero, Inc. All rights reserved.
  */
+#ifndef __AF_AFLIB_H__
+#define __AF_AFLIB_H__
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -12,6 +14,10 @@
 #include <af_log.h>
 
 #include "aflib_mcu.h"
+
+typedef af_lib_error_t af_status_t;
+
+
 
 af_lib_error_t af_lib_set_event_base(struct event_base *ev);
 
@@ -29,66 +35,35 @@ af_lib_error_t af_lib_set_event_base(struct event_base *ev);
 void af_lib_set_debug_level(int level);
 
 /*
- * af_lib_destroy
+ * af_lib_shutdown
  *
- * Gracefully shuts down the AfLib library
+ * Gracefully shuts down the AfLib library and perform house cleanup
+ * (calls af_lib_destory())
  *
  * @param af_lib                    - library to close
  *
  */
 
-void af_lib_destroy(af_lib_t *af_lib);
+void af_lib_shutdown(void);
 
 
-/*********************** deprecated compatibility API ****************************/
+/*
+ * af_lib_destroy
+ *
+ * Gracefully shuts down the AfLib library only.
+ *
+ * @param af_lib                    - library to close
+ *
+ */
 
-typedef af_lib_error_t af_status_t;
+void af_lib_destroy(af_lib_t* af_lib);
+
 
 /* API will not accept attribute values larger than this */
 #define MAX_ATTRIBUTE_SIZE                  255
 
-/*
- * a remote client is requesting that an attribute be changed.
- * return `true` to accept the change, or `false` to reject it.
- */
-typedef bool (*aflib_set_handler_t)(const uint16_t attr_id, const uint16_t value_len, const uint8_t *value);
-
-/*
- * notification of an attribute's current value, either because it has
- * changed internally, or because you asked for the current value with
- * `aflib_get_attribute`.
- */
-typedef void (*aflib_notify_handler_t)(const uint16_t attr_id, const uint16_t value_len, const uint8_t *value);
-
-/*
- * start aflib and register callbacks.
- */
-af_status_t aflib_init(struct event_base *ev, aflib_set_handler_t set_handler, aflib_notify_handler_t notify_handler);
-
-/*
- * request the current value of an attribute. the result is sent via the
- * aflib_notify_handler_t callback.
- */
-af_status_t aflib_get_attribute(const uint16_t attr_id);
-
-/*
- * request an attribute to be set.
- */
-af_status_t aflib_set_attribute_bytes(const uint16_t attr_id, const uint16_t value_len, const uint8_t *value);
-
-/*
- * variants of setting an attribute, for convenience.
- */
-af_status_t aflib_set_attribute_bool(const uint16_t attr_id, const bool value);
-af_status_t aflib_set_attribute_i8(const uint16_t attr_id, const int8_t value);
-af_status_t aflib_set_attribute_i16(const uint16_t attr_id, const int16_t value);
-af_status_t aflib_set_attribute_i32(const uint16_t attr_id, const int32_t value);
-af_status_t aflib_set_attribute_i64(const uint16_t attr_id, const int64_t value);
-af_status_t aflib_set_attribute_str(const uint16_t attr_id, const uint16_t value_len, const char *value);
-
-/*
- * closes the AfLib library
- */
-void aflib_shutdown(void);
 
 #define aflib_set_debug_level af_lib_set_debug_level
+
+#endif // __AF_AFLIB_H_
+
